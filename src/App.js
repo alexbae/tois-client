@@ -1,66 +1,38 @@
-// import logo from './logo.svg';
-// import './App.css';
+import React from "react";
+import firebase from "firebase/app";
+import "firebase/auth";
+import { FirebaseAuthProvider } from "@react-firebase/auth"
+import { 
+	BrowserRouter as Router,
+	Switch,
+	Route,
+	Redirect
+} from "react-router-dom"
 
-// function App() {
-//   return (
-//     <div className="App">
-//       <header className="App-header">
-//         <img src={logo} className="App-logo" alt="logo" />
-//         <p>
-//           Edit <code>src/App.js</code> and save to reload.
-//         </p>
-//         <a
-//           className="App-link"
-//           href="https://reactjs.org"
-//           target="_blank"
-//           rel="noopener noreferrer"
-//         >
-//           Learn React
-//         </a>
-//       </header>
-//     </div>
-//   );
-// }
+import { firebaseConfig } from "./config/firebase";
+import { useLogStatus, STATUS } from './utils/useLogStatus'
 
-// export default App;
-
-import React, { useState } from "react";
+import { Auth } from "./pages/Auth"
+import { Signup } from "./pages/Auth/Signup"
+import { Dashboard } from "./pages/Dashboard"
 
 const App = () => {
-	const [symbol, setSymbol] = useState('');
-	const [price, setPrice] = useState('???');
-
-	const handleOnChange = e => {
-		setSymbol(e.target.value)
-	}
-
-	const getStockPrice = async ticker => {
-		console.log("Getting data");
-		const request = await fetch(`https://us-central1-tois-f192d.cloudfunctions.net/api/stock/price`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json"
-			},
-		
-			body: JSON.stringify({
-				ticker: ticker,
-			})
-		});
-	  
-		const data = await request.json();
-		
-		setPrice(data.close);
-	};
+	const isSignedIn = useLogStatus()
 
 	return (
-		<div>
-			<label>Price</label>
-			<input type="text" onChange={handleOnChange} />
-			<button onClick={() => getStockPrice(symbol)}>Get stock price</button>
-			<p>
-				${price}
-			</p>
-		</div>
+		<FirebaseAuthProvider firebase={firebase} {...firebaseConfig}>
+			<Router>
+				<Switch>
+					<Route path={'/login'} component={Auth} />
+					<Route path={'/signup'} component={Signup} />
+					<Route path={'/dashboard'} component={Dashboard} />
+					<Route exact path="/">
+						{isSignedIn === STATUS.LOGGED_IN ? <Redirect to="/dashboard" /> : <Redirect to="/" />}
+						{isSignedIn === STATUS.LOGGED_OUT ? <Redirect to="/login" /> : <Redirect to="/" />}
+					</Route>
+				</Switch>
+			</Router>
+		</FirebaseAuthProvider>
 	);
 }
 
