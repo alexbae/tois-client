@@ -23,6 +23,7 @@ export const Signup = () => {
 
     const signup = e => {
         e.preventDefault()
+        
         firebaseInit.auth().createUserWithEmailAndPassword(form.email, form.password)
             .then(() => {
                 console.log('signed up')

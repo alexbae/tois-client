@@ -45,16 +45,10 @@ export const Dashboard = () => {
     }
 
     const updateField = e => {
-
-        if (e.target.name.indexOf('stocks') === -1) {
-
-        } else {
-            setForm({
-                ...form,
-                [e.target.name]: e.target.value
-            })
-        }
-        
+        setForm({
+            ...form,
+            [e.target.name]: e.target.value
+        })
     }
 
     const updateDoc = e => {
