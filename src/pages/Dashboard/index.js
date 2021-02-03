@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useHistory } from 'react-router-dom'
-import { Stock } from '../../components/Stock'
 import { db, firebaseInit } from '../../config/firebase'
-import { getPrice } from '../../utils/getPrice'
+import { getData } from '../../utils/getPrice'
 
 // TODO: add loading
 export const Dashboard = () => {
@@ -11,16 +10,6 @@ export const Dashboard = () => {
     
     const history = useHistory()
     const user = firebaseInit.auth().currentUser
-
-    useEffect(() => {
-        data.stocks && data.stocks.map(stock => {
-            console.log('test', stock.ticker)
-            setPriceList({
-                ...priceList,
-                [stock.ticker]: stock.ticker
-            })
-        })
-    }, [data])
 
     useEffect(() => {
         if (user) {
@@ -34,7 +23,26 @@ export const Dashboard = () => {
                 })
                 .catch(err => console.log('error', err))
         }
-    }, [user])
+    }, [user, history])
+
+    useEffect(() => {
+        let stockObj = {}
+
+        data.stocks && data.stocks.map(stock => {
+            return getData(stock.ticker).then(t => {
+                stockObj[stock.ticker] = t.close
+            })
+        })
+
+        const setPrice = setInterval(() => {
+            if (stockObj) {
+                setPriceList(stockObj)
+                clearInterval(setPrice)
+            }
+        }, 1000)
+
+        return setPrice
+    }, [data])
 
     // TODO: move to util
     const signOut = () => {
@@ -50,8 +58,6 @@ export const Dashboard = () => {
                 console.log(errorCode, errorMessage)
             })
     }
-
-    console.log(priceList)
 
     return (
         <div>
@@ -83,12 +89,14 @@ export const Dashboard = () => {
                     </thead>
                     <tbody>
                         {data.stocks && data.stocks.map((stock, idx) => {
+                            const price = priceList[stock.ticker]
+
                             return (
                                 <tr key={idx}>
                                     <td>{stock.ticker}</td>
-                                    <td><Stock ticker={stock.ticker} /></td>
+                                    <td>{price ? price : 'loading...'}</td>
                                     <td>{stock.amount}</td>
-                                    <td></td>
+                                    <td>{price ? (price * stock.amount) : 'loading...'}</td>
                                 </tr>
                             )
                         })}

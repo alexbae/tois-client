@@ -28,7 +28,7 @@ export const Stocks = () => {
                 })
                 .catch(err => console.log('error', err))
         }
-    }, [user])
+    }, [user, history])
 
     const updateStockField = e => {
         setStockForm({
