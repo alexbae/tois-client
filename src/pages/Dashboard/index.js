@@ -1,20 +1,26 @@
 import React, { useState, useEffect } from 'react'
-import { useHistory } from 'react-router-dom'
+import { Link, useHistory } from 'react-router-dom'
 import { Stock } from '../../components/Stock'
 import { db, firebaseInit } from '../../config/firebase'
+import { getPrice } from '../../utils/getPrice'
 
+// TODO: add loading
 export const Dashboard = () => {
-    const [form, setForm] = useState({
-        otherIncome: 0,
-        status: '',
-        deduction: '',
-        stock: ''
-    })
-
     const [data, setData] = useState({})
+    const [priceList, setPriceList] = useState({})
     
     const history = useHistory()
     const user = firebaseInit.auth().currentUser
+
+    useEffect(() => {
+        data.stocks && data.stocks.map(stock => {
+            console.log('test', stock.ticker)
+            setPriceList({
+                ...priceList,
+                [stock.ticker]: stock.ticker
+            })
+        })
+    }, [data])
 
     useEffect(() => {
         if (user) {
@@ -23,13 +29,14 @@ export const Dashboard = () => {
                     if (doc.exists) {
                         setData(doc.data())
                     } else {
-                        console.log('no doc!')
+                        history.push('/info')
                     }
                 })
                 .catch(err => console.log('error', err))
         }
     }, [user])
 
+    // TODO: move to util
     const signOut = () => {
         firebaseInit.auth().signOut()
             .then(() => {
@@ -44,27 +51,7 @@ export const Dashboard = () => {
             })
     }
 
-    const updateField = e => {
-        setForm({
-            ...form,
-            [e.target.name]: e.target.value
-        })
-    }
-
-    const updateDoc = e => {
-        e.preventDefault()
-
-        if (user) {
-            db.collection('users').doc(user.uid).set({
-                otherIncome: Number(form.otherIncome),
-                status: form.status,
-                deduction: form.deduction,
-                stock: form.stock
-            }).then(() => {
-                history.go(0)
-            })
-        }
-    }
+    console.log(priceList)
 
     return (
         <div>
@@ -74,41 +61,8 @@ export const Dashboard = () => {
             </div>
             <hr />
             <div>
-                <h3>Edit your info</h3>
-                <form>
-                    <div>
-                        <label>Other income</label><br />
-                        <input type="number" onChange={updateField} name="otherIncome" />
-                    </div>
-                    <div>
-                        <label>Status</label><br />
-                        <select defaultValue="" onChange={updateField} name="status">
-                            <option value="" disabled>Select one</option>
-                            <option value="Single">Single</option>
-                            <option value="Head of household">Head of Household</option>
-                            <option value="Married filling jointly">Married Filing Jointly</option>
-                            <option value="Married filing separately">Married Filing Separately</option>
-                            <option value="Qualifying window(er)">Qualifying Widow(er)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Deduction</label><br />
-                        <select defaultValue="" onChange={updateField} name="deduction">
-                            <option value="" disabled>Select one</option>
-                            <option value="Itemized" defaultValue>Itemized</option>
-                            <option value="Standard">Standard</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Add your stocks</label><br />
-                        <input type="text" onChange={updateField} name="stock" />
-                    </div>
-                    <button onClick={updateDoc}>submit</button>
-                </form>
-            </div>
-            <hr />
-            <div>
-                <h3>Your info</h3>
+                <Link to="/stocks">Add your stocks</Link>
+                <h1>Your info</h1>
                 <p>
                     otherIncome: {data.otherIncome}
                 </p>
@@ -118,14 +72,28 @@ export const Dashboard = () => {
                 <p>
                     deduction: {data.deduction}
                 </p>
-                <p>
-                    stock: {data.stock}
-                </p>
-                <div>
-                    {data.stock && (
-                        <Stock ticker={data.stock} />
-                    )}
-                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <td>Symbol</td>
+                            <td>Price</td>
+                            <td>Amount</td>
+                            <td>Total</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {data.stocks && data.stocks.map((stock, idx) => {
+                            return (
+                                <tr key={idx}>
+                                    <td>{stock.ticker}</td>
+                                    <td><Stock ticker={stock.ticker} /></td>
+                                    <td>{stock.amount}</td>
+                                    <td></td>
+                                </tr>
+                            )
+                        })}
+                    </tbody>
+                </table>
             </div>
         </div>
     )

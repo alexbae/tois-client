@@ -26,8 +26,8 @@ export const Stock = ({ ticker }) => {
 	}, [])
     
     return (
-        <div>
+        <>
             ${price}
-        </div>
+        </>
     )
 }
