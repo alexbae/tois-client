@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useHistory } from 'react-router-dom'
 import { db, firebaseInit } from '../../config/firebase'
+import { oneYearBefore } from '../../utils/date'
 import { getData } from '../../utils/getPrice'
 
 // TODO: add loading
@@ -30,7 +31,7 @@ export const Dashboard = () => {
 
         data.stocks && data.stocks.map(stock => {
             return getData(stock.ticker).then(t => {
-                stockObj[stock.ticker] = t.close
+                stockObj[stock.ticker] = t.results ? t.results[0].c : 'maximum request'
             })
         })
 
@@ -85,18 +86,22 @@ export const Dashboard = () => {
                             <td>Price</td>
                             <td>Amount</td>
                             <td>Total</td>
+                            <td>Bought date</td>
+                            <td>Short/long term</td>
                         </tr>
                     </thead>
                     <tbody>
                         {data.stocks && data.stocks.map((stock, idx) => {
                             const price = priceList[stock.ticker]
-
+console.log('test', new Date(stock.boughtDate))
                             return (
                                 <tr key={idx}>
                                     <td>{stock.ticker}</td>
                                     <td>{price ? price : 'loading...'}</td>
                                     <td>{stock.amount}</td>
                                     <td>{price ? (price * stock.amount) : 'loading...'}</td>
+                                    <td>{stock.boughtDate}</td>
+                                    <td>{oneYearBefore() < new Date(stock.boughtDate) ? 'Short' : 'Long'}</td>
                                 </tr>
                             )
                         })}
