@@ -124,16 +124,23 @@ export const Dashboard = () => {
                             <td>Amount</td>
                             <td>Total</td>
                             <td>Short/long term</td>
-                            <td>base cost</td>
+                            <td>Cost basis</td>
                             <td>Sell stock amount</td>
                             <td>Gain</td>
-                            <td>Tax rate</td>
+                            <td>Tax</td>
+                            <td>After tax cashflow</td>
                         </tr>
                     </thead>
                     <tbody>
                         {data.stocks && data.stocks.map((stock, idx) => {
                             const price = priceList[stock.ticker]
                             const gain = (price - stock.baseCost) * (stock.sellAmount ? stock.sellAmount : 0)
+
+                            const tax = oneYearBefore() < new Date(stock.boughtDate) ? (
+                                totalEarn.short && gain ? amountToCents(gain / totalEarn.short * shortTermTotalTax) : 0
+                            ) : (
+                                totalEarn.long && gain ? amountToCents(gain / totalEarn.long * longTermTotalTax) : 0
+                            )
 
                             return (
                                 <tr key={idx}>
@@ -145,19 +152,8 @@ export const Dashboard = () => {
                                     <td>{amountToCents(stock.baseCost)}</td>
                                     <td><input type="number" onChange={(e) => sellAmount(e, idx)} /></td>
                                     <td>{amountToCents(gain)}</td>
-                                    <td>
-                                        {
-                                            oneYearBefore() < new Date(stock.boughtDate) ? (
-                                                <div>
-                                                    {totalEarn.short && gain ? amountToCents(gain / totalEarn.short * shortTermTotalTax) : 0}
-                                                </div>
-                                            ) : (
-                                                <div>
-                                                    {totalEarn.long && gain ? amountToCents(gain / totalEarn.long * longTermTotalTax) : 0}
-                                                </div>
-                                            )
-                                        }
-                                    </td>
+                                    <td>{tax}</td>
+                                    <td>{amountToCents(gain - tax)}</td>
                                 </tr>
                             )
                         })}
