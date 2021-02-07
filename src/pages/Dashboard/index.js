@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useHistory } from 'react-router-dom'
 import { db, firebaseInit } from '../../config/firebase'
+import { amountToCents } from '../../utils/amount'
 import { oneYearBefore } from '../../utils/date'
 import { getData } from '../../utils/getPrice'
+import { taxCalculator } from '../../utils/taxCalculator'
 
 // TODO: add loading
 export const Dashboard = () => {
     const [data, setData] = useState({})
     const [priceList, setPriceList] = useState({})
+    const [totalEarn, setTatalEarn] = useState({ short: 0, long: 0 })
     
     const history = useHistory()
     const user = firebaseInit.auth().currentUser
@@ -27,22 +30,20 @@ export const Dashboard = () => {
     }, [user, history])
 
     useEffect(() => {
-        let stockObj = {}
+        const listObj = {}
 
-        data.stocks && data.stocks.map(stock => {
-            return getData(stock.ticker).then(t => {
-                stockObj[stock.ticker] = t.results ? t.results[0].c : 'maximum request'
+        if (Object.keys(priceList).length === 0) {
+            data.stocks && data.stocks.map(stock => {
+                if (!(stock.ticker in priceList)) {
+                    return getData(stock.ticker).then(t => {
+                        listObj[stock.ticker] = t.results ? t.results[0].c : 'maximum request'
+                    })
+                }
             })
-        })
-
-        const setPrice = setInterval(() => {
-            if (stockObj) {
-                setPriceList(stockObj)
-                clearInterval(setPrice)
-            }
-        }, 1000)
-
-        return setPrice
+    
+            // TODO: remove setTimeout and add loading while get data
+            setTimeout(() => setPriceList(listObj), 2000)
+        }
     }, [data])
 
     // TODO: move to util
@@ -59,6 +60,42 @@ export const Dashboard = () => {
                 console.log(errorCode, errorMessage)
             })
     }
+
+    const sellAmount = (e, idx) => {
+        const amount = e.target.value
+        data.stocks[idx].sellAmount = amount
+        
+        setData({
+            ...data
+        })
+
+        const shortTerm = data.stocks.filter(stock => oneYearBefore() < new Date(stock.boughtDate))
+        const longTerm = data.stocks.filter(stock => oneYearBefore() >= new Date(stock.boughtDate))
+
+        const earnArray = termArray => termArray.map(stock => {
+            const sellAmount = stock.sellAmount ? stock.sellAmount : 0
+            return (priceList[stock.ticker] - stock.baseCost) * sellAmount
+        })
+
+        const sum = arr => arr.reduce((total, num) => total + num)
+
+        const shortTermTotalEarn = sum(earnArray(shortTerm))
+        const longTermTotalEarn = sum(earnArray(longTerm))
+
+        setTatalEarn({ long: longTermTotalEarn, short: shortTermTotalEarn })
+    }
+
+    const longTermTotalTax = taxCalculator({ 
+        term: 'long',
+        status: data.status && (data.status).toLowerCase(),
+        earned: totalEarn.long
+    })
+
+    const shortTermTotalTax = taxCalculator({ 
+        term: 'short',
+        status: data.status && (data.status).toLowerCase(),
+        earned: totalEarn.short
+    })
 
     return (
         <div>
@@ -86,27 +123,68 @@ export const Dashboard = () => {
                             <td>Price</td>
                             <td>Amount</td>
                             <td>Total</td>
-                            <td>Bought date</td>
                             <td>Short/long term</td>
+                            <td>base cost</td>
+                            <td>Sell stock amount</td>
+                            <td>Gain</td>
+                            <td>Tax rate</td>
                         </tr>
                     </thead>
                     <tbody>
                         {data.stocks && data.stocks.map((stock, idx) => {
                             const price = priceList[stock.ticker]
-console.log('test', new Date(stock.boughtDate))
+                            const gain = (price - stock.baseCost) * (stock.sellAmount ? stock.sellAmount : 0)
+
                             return (
                                 <tr key={idx}>
                                     <td>{stock.ticker}</td>
                                     <td>{price ? price : 'loading...'}</td>
                                     <td>{stock.amount}</td>
-                                    <td>{price ? (price * stock.amount) : 'loading...'}</td>
-                                    <td>{stock.boughtDate}</td>
+                                    <td>{price ? amountToCents(price * stock.amount) : 'loading...'}</td>
                                     <td>{oneYearBefore() < new Date(stock.boughtDate) ? 'Short' : 'Long'}</td>
+                                    <td>{amountToCents(stock.baseCost)}</td>
+                                    <td><input type="number" onChange={(e) => sellAmount(e, idx)} /></td>
+                                    <td>{amountToCents(gain)}</td>
+                                    <td>
+                                        {
+                                            oneYearBefore() < new Date(stock.boughtDate) ? (
+                                                <div>
+                                                    {totalEarn.short && gain ? amountToCents(gain / totalEarn.short * shortTermTotalTax) : 0}
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    {totalEarn.long && gain ? amountToCents(gain / totalEarn.long * longTermTotalTax) : 0}
+                                                </div>
+                                            )
+                                        }
+                                    </td>
                                 </tr>
                             )
                         })}
                     </tbody>
                 </table>
+                <div>
+                    <h3>Total Earned</h3>
+                    <div>
+                        long: {totalEarn.long}
+                    </div>
+                    <div>
+                        short: {totalEarn.short}
+                    </div>
+                    <h3>Your estimated tax</h3>
+                    <div>
+                        Total tax:{' '}
+                        {longTermTotalTax + shortTermTotalTax}
+                    </div>
+                    <div>
+                        long:{' '}
+                        {longTermTotalTax}
+                    </div>
+                    <div>
+                        short:{' '}
+                        {shortTermTotalTax}
+                    </div>
+                </div>
             </div>
         </div>
     )
