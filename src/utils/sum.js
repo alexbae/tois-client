@@ -1,0 +1,1 @@
+export const sum = arr => arr.reduce((total, num) => total + num)
