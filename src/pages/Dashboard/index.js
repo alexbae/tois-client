@@ -33,7 +33,7 @@ export const Dashboard = () => {
             </div>
             <hr />
             <div>
-                <Link to="/stocks">Add your stocks</Link>
+                <Link to="/stocks">Add/Edit your stocks</Link>
                 <UserInfo data={data} />
                 <StockTable data={data} />
             </div>

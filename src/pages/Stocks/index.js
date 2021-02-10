@@ -3,15 +3,15 @@ import { Link, useHistory } from 'react-router-dom'
 import { db, firebaseInit } from '../../config/firebase'
 
 export const Stocks = () => {
-    const [data, setData] = useState({})
-    const [stockForm, setStockForm] = useState({
+    const [data, addData] = useState({})
+    const [stockRows, addStockRow] = useState([])
+    const [update, setUpdate] = useState(1)
+    const stockForm = {
         ticker: '',
         amount: 0,
         baseCost: 0,
         boughtDate: '',
-    })
-
-    const [stockRows, addStockRow] = useState([])
+    }
 
     const history = useHistory()
     const user = firebaseInit.auth().currentUser
@@ -21,7 +21,7 @@ export const Stocks = () => {
             db.collection("users").doc(user.uid).get()
                 .then(doc => {
                     if (doc.exists) {
-                        setData(doc.data())
+                        addData(doc.data())
                     } else {
                         history.push('/info')
                     }
@@ -30,17 +30,34 @@ export const Stocks = () => {
         }
     }, [user, history])
 
-    const updateStockField = e => {
-        setStockForm({
-            ...stockForm,
-            [e.target.name]: e.target.value
-        })
+    useEffect(() => {
+        if (data.stocks && data.stocks.length) {
+            addStockRow([ ...data.stocks ])
+        }
+    }, [data])
+
+    const updateStockField = (e, idx) => {
+        let currentStockRows = stockRows
+
+        currentStockRows[idx][e.target.name] = e.target.value
+
+        addStockRow(currentStockRows)
     }
 
     const addRow = e => {
         e.preventDefault()
-
+        // Row만 Add 되어야됨
         addStockRow([ ...stockRows, stockForm ])
+    }
+
+    const removeRow = (e, idx) => {
+        e.preventDefault()
+        let currentStockRows = stockRows
+
+        currentStockRows.splice(idx, 1)
+
+        addStockRow(currentStockRows)
+        setUpdate(update + 1)
     }
 
     const updateDoc = e => {
@@ -51,33 +68,43 @@ export const Stocks = () => {
                 ...data,
                 stocks: stockRows
             }).then(() => {
-                console.log('added')
+                history.push('/dashboard')
             })
         }
     }
 
+    const FormFields = ({ stock, idx }) => {
+        return (
+            <div key={`stock-${idx}`}>
+                <label>Ticker</label>
+                <input type="text" onChange={(e) => updateStockField(e, idx)} name="ticker" placeholder="ticker" defaultValue={stock.ticker ? stock.ticker : ''} />
+                <label>Amount</label>
+                <input type="number" onChange={(e) => updateStockField(e, idx)} name="amount" placeholder="amount" defaultValue={stock.amount ? stock.amount : 1} />
+                <label>Cost basis</label>
+                <input type="number" onChange={(e) => updateStockField(e, idx)} name="baseCost" placeholder="baseCost" defaultValue={stock.baseCost ? stock.baseCost : 0} />
+                <label>Purchase date</label>
+                <input type="date" onChange={(e) =>updateStockField(e, idx)} name="boughtDate" placeholder="boughtDate" defaultValue={stock.boughtDate ? stock.boughtDate : ''} />
+                <button onClick={e => removeRow(e, idx)}>Remove</button>
+            </div>
+        )
+    }
+
+    console.log('stockrow', stockRows)
+
     return (
         <div>
             <Link to="/dashboard">Back to dashboard</Link>
-            <h1>Add your stocks</h1>
+            <h1>Add/Edit your stocks</h1>
+            <p>{update}</p>
             <form>
                 <div>
                     <label>Add your stocks</label><br />
-                    <input type="text" onChange={updateStockField} name="ticker" placeholder="ticker" />
-                    <input type="number" onChange={updateStockField} name="amount" placeholder="amount" />
-                    <input type="number" onChange={updateStockField} name="baseCost" placeholder="baseCost" />
-                    <input type="date" onChange={updateStockField} name="boughtDate" placeholder="boughtDate" />
-                    {stockRows.map((_, idx) => (
-                        <div key={`stock-${idx}`}>
-                            <input type="text" onChange={updateStockField} name="ticker" placeholder="ticker" />
-                            <input type="number" onChange={updateStockField} name="amount" placeholder="amount" />
-                            <input type="number" onChange={updateStockField} name="baseCost" placeholder="baseCost" />
-                            <input type="date" onChange={updateStockField} name="boughtDate" placeholder="boughtDate" />
-                        </div>
+                    {stockRows.map((stock, idx) => (
+                        <FormFields key={idx} idx={idx} stock={stock} />
                     ))}
                     <button onClick={addRow}>add item</button>
                 </div>
-                <button onClick={updateDoc}>submit</button>
+                <button onClick={updateDoc}>Update</button>
             </form>
         </div>
     )

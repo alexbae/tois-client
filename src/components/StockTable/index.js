@@ -35,8 +35,8 @@ export const StockTable = ({ data }) => {
         const shortTerm = data.stocks.filter(stock => oneYearBefore() < new Date(stock.boughtDate))
         const longTerm = data.stocks.filter(stock => oneYearBefore() >= new Date(stock.boughtDate))
 
-        const shortTermTotalEarn = sum(getEarnArray(shortTerm, priceList))
-        const longTermTotalEarn = sum(getEarnArray(longTerm, priceList))
+        const shortTermTotalEarn = shortTerm.length ? sum(getEarnArray(shortTerm, priceList)) : 0
+        const longTermTotalEarn = longTerm.length ? sum(getEarnArray(longTerm, priceList)) : 0
 
         setTatalEarn({ long: longTermTotalEarn, short: shortTermTotalEarn })
     }

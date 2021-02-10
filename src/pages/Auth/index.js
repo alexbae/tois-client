@@ -5,6 +5,7 @@ import { useLogStatus, STATUS } from '../../utils/useLogStatus'
 
 export const Auth = () => {
     const [ form, setState ] = useState({ email: "", password: "" })
+    const [ error, setError ] = useState("")
     const history = useHistory()
     const status = useLogStatus()
 
@@ -28,10 +29,7 @@ export const Auth = () => {
                 console.log('logged in')
             })
             .catch((error) => {
-                var errorCode = error.code;
-                var errorMessage = error.message;
-                
-                console.log(errorCode, errorMessage)
+                setError(error.message)
             })
     }
 
@@ -50,6 +48,7 @@ export const Auth = () => {
                     <div>
                         <input type="password" name="password" placeholder="password" onChange={updateField} />
                     </div>
+                    <p>{error}</p>
                     <div>
                         <button onClick={login}>login</button>
                     </div>
